@@ -1,0 +1,10 @@
+
+[ClassVersion("1.0.0.0"), FriendlyName("cJsonFile")]
+class cIniFile : OMI_BaseResource
+{
+    [Write, ValueMap{"Present","Absent"}, Values{"Present","Absent"}] String Ensure;
+    [Key] String Path;
+    [Key] String Key;
+    [Write] String Value;
+};
+
