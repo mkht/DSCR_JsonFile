@@ -54,6 +54,7 @@ function Get-TargetResource {
         $Result.Ensure = 'Absent'
     }
     else {
+        # Read JSON
         $Json = try {
             Get-Content -Path $Path -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Ignore
         }
@@ -67,17 +68,30 @@ function Get-TargetResource {
         else {
             $JsonHash = ConvertTo-HashTable -InputObject $Json
 
-            if (-not $JsonHash.ContainsKey($Key)) {
-                Write-Verbose ('The key "{0}" is not found' -f $Key)
-                $Result.Ensure = 'Absent'
-            }
-            else {
-                $Result.Key = $Key
-                $Result.Value = $JsonHash.$Key
+            $KeyHierarchy = $Key -split '/'
+            $tHash = $JsonHash
+            for ($i = 0; $i -lt $KeyHierarchy.Count; $i++) {
+                $local:tKey = $KeyHierarchy[$i]
 
-                if (-not (Compare-MyObject $JsonHash.$Key $ValueObject)) {
-                    Write-Verbose 'The Value of Key is not matched'
+                if (-not $tHash.ContainsKey($tKey)) {
+                    Write-Verbose ('The key "{0}" is not found' -f $tKey)
                     $Result.Ensure = 'Absent'
+                    break
+                }
+
+                if ($i -gt ($KeyHierarchy.Count - 2)) {
+                    $Result.Key = $Key
+                    $Result.Value = ($tHash.$tKey | ConvertTo-Json -Compress)
+
+                    if (-not (Compare-MyObject $tHash.$tKey $ValueObject)) {
+                        Write-Verbose 'The Value of Key is not matched'
+                        $Result.Ensure = 'Absent'
+                    }
+
+                    break
+                }
+                else {
+                    $tHash = $tHash.$tKey
                 }
             }
         }
@@ -174,7 +188,18 @@ function Set-TargetResource {
     # Ensure = "Absent"
     if ($Ensure -eq 'Absent') {
         if ($JsonHash) {
-            $JsonHash.Remove($Key)
+            $KeyHierarchy = $Key -split '/'
+            $expression = '$JsonHash'
+            for ($i = 0; $i -lt $KeyHierarchy.Count; $i++) {
+                if ($i -ne ($KeyHierarchy.Count - 1)) {
+                    $expression += ('.{0}' -f $KeyHierarchy[$i])
+                }
+                else {
+                    $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                }
+            }
+
+            Invoke-Expression -Command $expression
             $JsonHash | ConvertTo-Json | Format-Json | Out-File -FilePath $Path -Encoding utf8 -Force
         }
     }
@@ -183,7 +208,21 @@ function Set-TargetResource {
         if ($null -eq $JsonHash) {
             $JsonHash = @{}
         }
-        $JsonHash[$Key] = $ValueObject
+
+        # Workaroud for ConvertTo-Json bug
+        # https://github.com/PowerShell/PowerShell/issues/3153
+        if ($ValueObject -is [Array]) {
+            $ValueObject = $ValueObject.SyncRoot
+        }
+
+        $KeyHierarchy = $Key -split '/'
+        $expression = '$JsonHash'
+        for ($i = 0; $i -lt $KeyHierarchy.Count; $i++) {
+            $expression += ('.{0}' -f $KeyHierarchy[$i])
+        }
+        $expression += ' = $ValueObject'
+
+        Invoke-Expression -Command $expression
         $JsonHash | ConvertTo-Json | Format-Json | Out-File -FilePath $Path -Encoding utf8 -Force
     }
 }
@@ -294,7 +333,6 @@ function Compare-MyObject {
 
 
 #region Format-Json
-
 # Original code obtained from https://github.com/PowerShell/PowerShell/issues/2736
 # Formats JSON in a nicer format than the built-in ConvertTo-Json does.
 function Format-Json {
