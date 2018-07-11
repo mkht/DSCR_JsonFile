@@ -1,8 +1,11 @@
-#region HEADER
+﻿#region HEADER
 
 $script:moduleRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 Import-Module (Join-Path $script:moduleRoot '\DSCResources\cJsonFile\cJsonFile.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '\TestHelper\TestHelper.psm1') -Force
+
+$global:TestData = Join-Path $PSScriptRoot '\TestData'
 
 # Begin Testing
 InModuleScope 'cJsonFile' {
@@ -164,7 +167,7 @@ InModuleScope 'cJsonFile' {
                 $getParam = @{
                     Path  = $jsonPath
                     Key   = 'String'
-                    Value = 'not match'
+                    Value = '"not match"'
                 }
                     
                 $result = Get-TargetResource @getParam
@@ -179,7 +182,7 @@ InModuleScope 'cJsonFile' {
                 $getParam = @{
                     Path  = $jsonPath
                     Key   = 'SubDictionary/SubDicKey2'
-                    Value = 'not match'
+                    Value = '"not match"'
                 }
                     
                 $result = Get-TargetResource @getParam
@@ -187,6 +190,57 @@ InModuleScope 'cJsonFile' {
                 $result.Path | Should -Be $getParam.Path
                 $result.Key | Should -Be $getParam.Key
                 $result.Value | Should -Be 'true'
+            }
+        }
+
+
+        Context 'TextEncoding' {
+            It 'Get exist Key Value Pair (UTF-8)' {
+                $jsonPath = (Join-Path $TestData 'utf8_crlf.json')
+                $getParam = @{
+                    Path     = $jsonPath
+                    Key      = 'test'
+                    Value    = '"あいうえお"'
+                    Encoding = 'utf8'
+                }
+                    
+                $result = Get-TargetResource @getParam
+                $result.Ensure | Should -Be 'Present'
+                $result.Path | Should -Be $getParam.Path
+                $result.Key | Should -Be $getParam.Key
+                $result.Value | Should -Be '"あいうえお"'
+            }
+
+            It 'Get exist Key Value Pair (Unicode)' {
+                $jsonPath = (Join-Path $TestData 'unicode_crlf.json')
+                $getParam = @{
+                    Path     = $jsonPath
+                    Key      = 'test'
+                    Value    = '"あいうえお"'
+                    Encoding = 'unicode'
+                }
+                    
+                $result = Get-TargetResource @getParam
+                $result.Ensure | Should -Be 'Present'
+                $result.Path | Should -Be $getParam.Path
+                $result.Key | Should -Be $getParam.Key
+                $result.Value | Should -Be '"あいうえお"'
+            }
+
+            It 'Get exist Key Value Pair (bigendianunicode)' {
+                $jsonPath = (Join-Path $TestData 'bigendianunicode_crlf.json')
+                $getParam = @{
+                    Path     = $jsonPath
+                    Key      = 'test'
+                    Value    = '"あいうえお"'
+                    Encoding = 'bigendianunicode'
+                }
+                    
+                $result = Get-TargetResource @getParam
+                $result.Ensure | Should -Be 'Present'
+                $result.Path | Should -Be $getParam.Path
+                $result.Key | Should -Be $getParam.Key
+                $result.Value | Should -Be '"あいうえお"'
             }
         }
     }
@@ -439,37 +493,160 @@ InModuleScope 'cJsonFile' {
                 $result.SubDictionary.SubDicKey1.k2 | Should -Be 345
                 $result.SubDictionary.SubDicKey1.k3 | Should -Be "ABC"
             }
+        }
 
+        Context 'Ensure = Absent' {
 
-            Context 'Ensure = Absent' {
-
-                It 'Remove Key in JSON' {
-                    $jsonPath = (Join-Path $TestDrive $ExistMock)
-                    $getParam = @{
-                        Ensure = 'Absent'
-                        Path   = $jsonPath
-                        Key    = 'String'
-                    }
-                    
-                    { Set-TargetResource @getParam } | Should -Not -Throw
-                    $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
-                    $result | Get-Member -MemberType NoteProperty | Where-Object {$_.Name -eq 'String'} | Should -Be $null
+            It 'Remove Key in JSON' {
+                $jsonPath = (Join-Path $TestDrive $ExistMock)
+                $getParam = @{
+                    Ensure = 'Absent'
+                    Path   = $jsonPath
+                    Key    = 'String'
                 }
-
-                It 'Remove Key in JSON  (SubDictionary)' {
-                    $jsonPath = (Join-Path $TestDrive $ExistMock)
-                    $getParam = @{
-                        Ensure = 'Absent'
-                        Path   = $jsonPath
-                        Key    = 'SubDictionary/SubDicKey2'
-                    }
                     
-                    { Set-TargetResource @getParam } | Should -Not -Throw
-                    $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
-                    $result.SubDictionary | Get-Member -MemberType NoteProperty | Where-Object {$_.Name -eq 'SubDicKey2'} | Should -Be $null
-                }
-
+                { Set-TargetResource @getParam } | Should -Not -Throw
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result | Get-Member -MemberType NoteProperty | Where-Object {$_.Name -eq 'String'} | Should -Be $null
             }
+
+            It 'Remove Key in JSON  (SubDictionary)' {
+                $jsonPath = (Join-Path $TestDrive $ExistMock)
+                $getParam = @{
+                    Ensure = 'Absent'
+                    Path   = $jsonPath
+                    Key    = 'SubDictionary/SubDicKey2'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result.SubDictionary | Get-Member -MemberType NoteProperty | Where-Object {$_.Name -eq 'SubDicKey2'} | Should -Be $null
+            }
+        }
+
+        Context 'TextEncoding' {
+
+            It 'Create new Json file specified encoding (UTF-8)' {
+                $jsonPath = (Join-Path $TestDrive 'utf8.Json')
+                $getParam = @{
+                    Ensure   = 'Present'
+                    Path     = $jsonPath
+                    Key      = 'test'
+                    Value    = '"あいうえお"'
+                    Encoding = 'utf8'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+
+                Test-Path -LiteralPath $jsonPath | Should -Be $true
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result.test | Should -Be 'あいうえお'
+
+                (Get-Encoding -Path $jsonPath).BodyName | Should -Be 'utf-8'
+                Test-BOM -Path $jsonPath | Should -Be $null #NoBOM
+            }
+
+            It 'Create new Json file specified encoding (UTF-8 with BOM)' {
+                $jsonPath = (Join-Path $TestDrive 'utf8bom.Json')
+                $getParam = @{
+                    Ensure   = 'Present'
+                    Path     = $jsonPath
+                    Key      = 'test'
+                    Value    = '"あいうえお"'
+                    Encoding = 'utf8BOM'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+
+                Test-Path -LiteralPath $jsonPath | Should -Be $true
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result.test | Should -Be 'あいうえお'
+
+                (Get-Encoding -Path $jsonPath).BodyName | Should -Be 'utf-8'
+                Test-BOM -Path $jsonPath | Should -Be 'utf8BOM'
+            }
+
+
+            It 'Create new Json file specified encoding (unicode)' {
+                $jsonPath = (Join-Path $TestDrive 'unicode_crlf.Json')
+                $getParam = @{
+                    Ensure   = 'Present'
+                    Path     = $jsonPath
+                    Key      = 'test'
+                    Value    = '"あいうえお"'
+                    Encoding = 'unicode'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+
+                Test-Path -LiteralPath $jsonPath | Should -Be $true
+                $result = Get-Content -Path $jsonPath -Encoding unicode -raw | ConvertFrom-Json
+                $result.test | Should -Be 'あいうえお'
+
+                (Get-Encoding -Path $jsonPath).BodyName | Should -Be 'utf-16'
+            }
+
+            It 'Create new Json file specified encoding (BigEndianUnicode)' {
+                $jsonPath = (Join-Path $TestDrive 'BigEndianUnicode_crlf.Json')
+                $getParam = @{
+                    Ensure   = 'Present'
+                    Path     = $jsonPath
+                    Key      = 'test'
+                    Value    = '"あいうえお"'
+                    Encoding = 'BigEndianUnicode'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+
+                Test-Path -LiteralPath $jsonPath | Should -Be $true
+                $result = Get-Content -Path $jsonPath -Encoding BigEndianUnicode -raw | ConvertFrom-Json
+                $result.test | Should -Be 'あいうえお'
+
+                (Get-Encoding -Path $jsonPath).BodyName | Should -Be 'utf-16BE'
+            }
+        }
+
+
+        Context 'NewLine Code' {
+
+            It 'Create new Json file specified new line code (CRLF)' {
+                $jsonPath = (Join-Path $TestDrive 'utf8.Json')
+                $getParam = @{
+                    Ensure  = 'Present'
+                    Path    = $jsonPath
+                    Key     = 'test'
+                    Value   = '"test"'
+                    NewLine = 'CRLF'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+
+                Test-Path -LiteralPath $jsonPath | Should -Be $true
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result.test | Should -Be 'test'
+
+                Test-NewLineCode -Path $jsonPath | Should -Be 'CRLF'
+            }
+
+            It 'Create new Json file specified new line code (LF)' {
+                $jsonPath = (Join-Path $TestDrive 'utf8.Json')
+                $getParam = @{
+                    Ensure  = 'Present'
+                    Path    = $jsonPath
+                    Key     = 'test'
+                    Value   = '"test"'
+                    NewLine = 'LF'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+
+                Test-Path -LiteralPath $jsonPath | Should -Be $true
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result.test | Should -Be 'test'
+
+                Test-NewLineCode -Path $jsonPath | Should -Be 'LF'
+            }
+
         }
     }
     #endregion Tests for Set-TargetResource

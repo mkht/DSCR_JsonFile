@@ -1,4 +1,16 @@
-﻿#region Get-TargetResource
+﻿Enum Encoding {
+    Default
+    utf8
+    utf8NoBOM
+    utf8BOM
+    utf32
+    unicode
+    bigendianunicode
+    ascii
+}
+
+
+#region Get-TargetResource
 function Get-TargetResource {
     [CmdletBinding()]
     [OutputType([System.Collections.Hashtable])]
@@ -20,7 +32,16 @@ function Get-TargetResource {
         [Parameter(Mandatory = $false)]
         [AllowEmptyString()]
         [string]
-        $Value = ''
+        $Value = '',
+
+        [Parameter(Mandatory = $false)]
+        [Encoding]
+        $Encoding = 'utf8NoBOM',
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('CRLF', 'LF')]
+        [string]
+        $NewLine = 'CRLF'
     )
 
     $Result = @{
@@ -56,7 +77,8 @@ function Get-TargetResource {
     else {
         # Read JSON
         $Json = try {
-            Get-Content -Path $Path -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Ignore
+            $PSEncoder = Get-PSEncoding -Encoding $Encoding
+            Get-Content -Path $Path -Raw -Encoding $PSEncoder | ConvertFrom-Json -ErrorAction Ignore
         }
         catch {}
 
@@ -124,10 +146,19 @@ function Test-TargetResource {
         [Parameter(Mandatory = $false)]
         [AllowEmptyString()]
         [string]
-        $Value = ''
+        $Value = '',
+
+        [Parameter(Mandatory = $false)]
+        [Encoding]
+        $Encoding = 'utf8NoBOM',
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('CRLF', 'LF')]
+        [string]
+        $NewLine = 'CRLF'
     )
 
-    [bool]$result = (Get-TargetResource -Ensure $Ensure -Path $Path -Key $Key -Value $Value).Ensure -eq $Ensure
+    [bool]$result = (Get-TargetResource @PSBoundParameters).Ensure -eq $Ensure
     return $result
 }
 #endregion Test-TargetResource
@@ -153,8 +184,19 @@ function Set-TargetResource {
         [Parameter(Mandatory = $false)]
         [AllowEmptyString()]
         [string]
-        $Value = ''
+        $Value = '',
+
+        [Parameter(Mandatory = $false)]
+        [Encoding]
+        $Encoding = 'utf8NoBOM',
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('CRLF', 'LF')]
+        [string]
+        $NewLine = 'CRLF'
     )
+
+    $PSEncoder = Get-PSEncoding -Encoding $Encoding
 
     $ValueObject = $null
     if ($Value) {
@@ -177,7 +219,7 @@ function Set-TargetResource {
     $JsonHash = $null
     if (Test-Path -Path $Path -PathType Leaf) {
         $JsonHash = try {
-            $Json = Get-Content -Path $Path -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction Ignore
+            $Json = Get-Content -Path $Path -Raw -Encoding $PSEncoder | ConvertFrom-Json -ErrorAction Ignore
             if ($Json) {
                 ConvertTo-HashTable -InputObject $Json
             }
@@ -200,7 +242,13 @@ function Set-TargetResource {
             }
 
             Invoke-Expression -Command $expression
-            $JsonHash | ConvertTo-Json | Format-Json | Out-File -FilePath $Path -Encoding utf8 -Force
+
+            if (('utf8', 'utf8NoBOM') -eq $Encoding) {
+                $JsonHash | ConvertTo-Json | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
+            }
+            else {
+                $JsonHash | ConvertTo-Json | Format-Json | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
+            }
         }
     }
     else {
@@ -223,10 +271,59 @@ function Set-TargetResource {
         $expression += ' = $ValueObject'
 
         Invoke-Expression -Command $expression
-        $JsonHash | ConvertTo-Json | Format-Json | Out-File -FilePath $Path -Encoding utf8 -Force
+
+        if (('utf8', 'utf8NoBOM') -eq $Encoding) {
+            $JsonHash | ConvertTo-Json | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
+        }
+        else {
+            $JsonHash | ConvertTo-Json | Format-Json | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
+        }
     }
 }
 #endregion Set-TargetResource
+
+
+function Convert-NewLine {
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
+        [string]
+        $InputObject,
+
+        [Parameter(Position = 1)]
+        [ValidateSet('CRLF', 'LF')]
+        [string]
+        $NewLine = 'CRLF'
+        
+    )
+
+    if ($NewLine -eq 'LF') {
+        $InputObject.Replace("`r`n", "`n")
+    }
+    else {
+        $InputObject -replace "[^\r]\n", "`r`n"
+    }
+}
+
+
+function Get-PSEncoding {
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory, Position = 0)]
+        [Encoding]
+        $Encoding
+    )
+
+    switch -wildcard ($Encoding) {
+        'utf8*' {
+            'utf8'
+            break
+        }
+        Default {
+            $_.toString()
+        }
+    }
+}
 
 
 #region ConvertTo-HashTable
