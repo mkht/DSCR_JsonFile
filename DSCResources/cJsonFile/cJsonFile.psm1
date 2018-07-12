@@ -247,10 +247,10 @@ function Set-TargetResource {
             Invoke-Expression -Command $expression
 
             if (('utf8', 'utf8NoBOM') -eq $Encoding) {
-                $JsonHash | ConvertTo-Json | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
+                ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
             }
             else {
-                $JsonHash | ConvertTo-Json | Format-Json | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
+                ConvertTo-Json -InputObject $JsonHash -Depth 100 | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
             }
         }
     }
@@ -287,10 +287,10 @@ function Set-TargetResource {
         }
 
         if (('utf8', 'utf8NoBOM') -eq $Encoding) {
-            $JsonHash | ConvertTo-Json | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
+            ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
         }
         else {
-            $JsonHash | ConvertTo-Json | Format-Json | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
+            ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
         }
     }
 }
