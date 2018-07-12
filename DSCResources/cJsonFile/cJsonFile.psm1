@@ -1,3 +1,4 @@
+
 Enum Encoding {
     Default
     utf8
