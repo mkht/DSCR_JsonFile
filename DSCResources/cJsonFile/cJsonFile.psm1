@@ -408,15 +408,20 @@ function Compare-MyObject {
     [OutputType([bool])]
     Param(
         [Parameter(Mandatory = $true)]
+        [AllowNull()]
         [Object]$Left,
     
         [Parameter(Mandatory = $true)]
+        [AllowNull()]
         [Object]$Right
     )
 
     $Result = $true
 
-    if (($Left -as [HashTable]) -and ($Right -as [HashTable])) {
+    if (($null -eq $Left) -or ($null -eq $Right)) {
+        $Result = ($null -eq $Left) -and ($null -eq $Right)
+    }
+    elseif (($Left -as [HashTable]) -and ($Right -as [HashTable])) {
         if (-not (Compare-Hashtable $Left $Right)) {
             $Result = $false
         }
