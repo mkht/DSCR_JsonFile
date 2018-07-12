@@ -245,13 +245,6 @@ function Set-TargetResource {
             }
 
             Invoke-Expression -Command $expression
-
-            if (('utf8', 'utf8NoBOM') -eq $Encoding) {
-                ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
-            }
-            else {
-                ConvertTo-Json -InputObject $JsonHash -Depth 100 | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
-            }
         }
     }
     else {
@@ -285,13 +278,13 @@ function Set-TargetResource {
                 break
             }
         }
+    }
 
-        if (('utf8', 'utf8NoBOM') -eq $Encoding) {
-            ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
-        }
-        else {
-            ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
-        }
+    if (('utf8', 'utf8NoBOM') -eq $Encoding) {
+        ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
+    }
+    else {
+        ConvertTo-Json -InputObject $JsonHash -Depth 100 | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
     }
 }
 #endregion Set-TargetResource
