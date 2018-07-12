@@ -463,6 +463,21 @@ InModuleScope 'cJsonFile' {
                 $result.DicZ.k3 | Should -Be "ABC"
             }
 
+            It 'Add Key Value Pair to Json when the key not exist (SubDictionary)' {
+                $jsonPath = (Join-Path $TestDrive $ExistMock)
+                $getParam = @{
+                    Ensure = 'Present'
+                    Path   = $jsonPath
+                    Key    = 'DicZ/DicY'
+                    Value  = (@{k1 = $true; k2 = 345; k3 = 'ABC'} | ConvertTo-Json)
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result.DicZ.DicY.k1 | Should -Be $true
+                $result.DicZ.DicY.k2 | Should -Be 345
+                $result.DicZ.DicY.k3 | Should -Be "ABC"
+            }
 
             It 'Modify exist Key Value Pair' {
                 $jsonPath = (Join-Path $TestDrive $ExistMock)

@@ -1,4 +1,5 @@
-﻿Enum Encoding {
+
+Enum Encoding {
     Default
     utf8
     utf8NoBOM
@@ -237,7 +238,9 @@ function Set-TargetResource {
                     $expression += ('.{0}' -f $KeyHierarchy[$i])
                 }
                 else {
-                    $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                    if (Invoke-Expression -Command $expression) {
+                        $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                    }
                 }
             }
 
@@ -264,13 +267,24 @@ function Set-TargetResource {
         }
 
         $KeyHierarchy = $Key -split '/'
-        $expression = '$JsonHash'
+        $tHash = $JsonHash
         for ($i = 0; $i -lt $KeyHierarchy.Count; $i++) {
-            $expression += ('.{0}' -f $KeyHierarchy[$i])
-        }
-        $expression += ' = $ValueObject'
+            if ($i -lt ($KeyHierarchy.Count - 1)) {
 
-        Invoke-Expression -Command $expression
+                if (-not $tHash.ContainsKey($KeyHierarchy[$i])) {
+                    $tHash.($KeyHierarchy[$i]) = @{}
+                }
+                elseif ($tHash.($KeyHierarchy[$i]) -isnot [hashtable]) {
+                    $tHash.($KeyHierarchy[$i]) = @{}
+                }
+
+                $tHash = $tHash.($KeyHierarchy[$i])
+            }
+            else {
+                $tHash.($KeyHierarchy[$i]) = $ValueObject
+                break
+            }
+        }
 
         if (('utf8', 'utf8NoBOM') -eq $Encoding) {
             $JsonHash | ConvertTo-Json | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
