@@ -1,4 +1,4 @@
-﻿Enum Encoding {
+Enum Encoding {
     Default
     utf8
     utf8NoBOM
@@ -237,7 +237,9 @@ function Set-TargetResource {
                     $expression += ('.{0}' -f $KeyHierarchy[$i])
                 }
                 else {
-                    $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                    if (Invoke-Expression -Command $expression) {
+                        $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                    }
                 }
             }
 
@@ -266,18 +268,18 @@ function Set-TargetResource {
         $KeyHierarchy = $Key -split '/'
         $tHash = $JsonHash
         for ($i = 0; $i -lt $KeyHierarchy.Count; $i++) {
-            if($i -lt ($KeyHierarchy.Count -1)){
+            if ($i -lt ($KeyHierarchy.Count - 1)) {
 
-                if(-not $tHash.ContainsKey($KeyHierarchy[$i])){
+                if (-not $tHash.ContainsKey($KeyHierarchy[$i])) {
                     $tHash.($KeyHierarchy[$i]) = @{}
                 }
-                elseif($tHash.($KeyHierarchy[$i]) -isnot [hashtable]){
+                elseif ($tHash.($KeyHierarchy[$i]) -isnot [hashtable]) {
                     $tHash.($KeyHierarchy[$i]) = @{}
                 }
 
                 $tHash = $tHash.($KeyHierarchy[$i])
             }
-            else{
+            else {
                 $tHash.($KeyHierarchy[$i]) = $ValueObject
                 break
             }
