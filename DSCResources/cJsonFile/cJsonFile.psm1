@@ -268,7 +268,7 @@ function Set-TargetResource {
         for ($i = 0; $i -lt $KeyHierarchy.Count; $i++) {
             if($i -lt ($KeyHierarchy.Count -1)){
 
-                if($null -eq $tHash.ContainsKey($KeyHierarchy[$i])){
+                if(-not $tHash.ContainsKey($KeyHierarchy[$i])){
                     $tHash.($KeyHierarchy[$i]) = @{}
                 }
                 elseif($tHash.($KeyHierarchy[$i]) -isnot [hashtable]){
