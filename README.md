@@ -20,7 +20,7 @@ Install-Module -Name DSCR_JsonFile
 + [string] **Key** (Key):
     + Key element.
 
-+ [string] **Value** (Write):
++ [string] **Value** (Key):
     + The value corresponding to the key.
     + The value of this parameter must be a JSON formatted string.
 

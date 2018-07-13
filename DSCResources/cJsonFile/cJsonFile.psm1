@@ -1,4 +1,4 @@
-﻿
+
 Enum Encoding {
     Default
     utf8
@@ -30,10 +30,9 @@ function Get-TargetResource {
         [string]
         $Key,
 
-        [Parameter(Mandatory = $false)]
-        [AllowEmptyString()]
+        [Parameter(Mandatory = $true)]
         [string]
-        $Value = '',
+        $Value,
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Value', 'ArrayElement')]
@@ -166,10 +165,9 @@ function Test-TargetResource {
         [string]
         $Key,
 
-        [Parameter(Mandatory = $false)]
-        [AllowEmptyString()]
+        [Parameter(Mandatory = $true)]
         [string]
-        $Value = '',
+        $Value,
 
         [Parameter(Mandatory = $false)]
         [ValidateSet('Value', 'ArrayElement')]
@@ -209,10 +207,9 @@ function Set-TargetResource {
         [string]
         $Key,
 
-        [Parameter(Mandatory = $false)]
-        [AllowEmptyString()]
+        [Parameter(Mandatory = $true)]
         [string]
-        $Value = '',
+        $Value,
         
         [Parameter(Mandatory = $false)]
         [ValidateSet('Value', 'ArrayElement')]
