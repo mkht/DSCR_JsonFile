@@ -70,4 +70,5 @@ The result of executing the above configuration, the following JSON file will ou
 
 ----
 ## ChangeLog
-
++ **0.2.0**
+    - Initial public release
