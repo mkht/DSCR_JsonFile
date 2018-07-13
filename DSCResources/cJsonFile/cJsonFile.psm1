@@ -108,7 +108,7 @@ function Get-TargetResource {
 
                 if ($i -gt ($KeyHierarchy.Count - 2)) {
                     $Result.Key = $Key
-                    $Result.Value = ($tHash.$tKey | ConvertTo-Json -Compress)
+                    $Result.Value = ConvertTo-Json -InputObject $tHash.$tKey -Compress
 
                     switch ($Mode) {
                         'Value' {
@@ -120,7 +120,15 @@ function Get-TargetResource {
 
                         'ArrayElement' {
                             if ($tHash.$tKey -is [Array]) {
-                                if (-not $tHash.$tKey.Contains($ValueObject)) {
+                                $contains = $false
+                                $tHash.$tKey | % {
+                                    if (Compare-MyObject $_ $ValueObject) {
+                                        $contains = $true
+                                        return
+                                    }
+                                }
+
+                                if (-not $contains) {
                                     Write-Verbose 'The Value of Key is not matched'
                                     $Result.Ensure = 'Absent'
                                 }
@@ -407,12 +415,15 @@ function Get-PSEncoding {
 function ConvertTo-HashTable {
 
     [CmdletBinding()]
-    [OutputType([System.Collections.Hashtable])]
     param(
         [Parameter(Mandatory, Position = 0, ValueFromPipeline)]
         [PSObject]
         $InputObject
     )
+
+    if ($InputObject -isnot [System.Management.Automation.PSCustomObject]) {
+        return $InputObject
+    }
 
     $Output = @{}
     $InputObject.psobject.properties | Where-Object {$_.MemberType -eq 'NoteProperty'} | ForEach-Object { 
@@ -420,6 +431,9 @@ function ConvertTo-HashTable {
         
         if ($_.Value -is [System.Management.Automation.PSCustomObject]) {
             $Output[$_.Name] = ConvertTo-HashTable -InputObject $_.Value
+        }
+        elseif ($_.Value -is [Array]) {
+            $Output[$_.Name] = @($_.Value | ForEach-Object {ConvertTo-HashTable -InputObject $_})
         }
         else {
             $Output[$_.Name] = $_.Value
@@ -496,9 +510,7 @@ function Compare-MyObject {
         $Result = $false
     }
     elseif ($Left.Count -gt 1) {
-        if (-not (($Left -join ';') -ceq ($Right -join ';'))) {
-            $Result = $false
-        }
+        $Result = Compare-Array $Left $Right
     }
     else {
         if (Compare-Object $Left $Right -CaseSensitive) {
@@ -509,6 +521,38 @@ function Compare-MyObject {
     $Result
 }
 #endregion Compare-MyObject
+
+
+#region Compare-Array
+function Compare-Array {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [Object[]]$Left,
+    
+        [Parameter(Mandatory = $true)]
+        [Object[]]$Right
+    )
+
+    $Result = $true
+
+    if ($Left.Count -ne $Right.Count) {
+        return $false
+    }
+    else {
+        for ($i = 0; $i -lt $Left.Count; $i++) {
+            if (-not (Compare-MyObject $Left[$i] $Right[$i])) {
+                $Result = $false
+                break
+            }
+        }
+    }
+
+    $Result
+
+}
+#endregion Compare-Array
 
 
 #region Format-Json
