@@ -1,4 +1,4 @@
-
+﻿
 Enum Encoding {
     Default
     utf8
@@ -193,6 +193,10 @@ function Test-TargetResource {
     )
 
     [bool]$result = (Get-TargetResource @PSBoundParameters).Ensure -eq $Ensure
+    
+    if ($result) {Write-Verbose 'The test passed'}
+    else {Write-Verbose 'The test failed'}
+
     return $result
 }
 #endregion Test-TargetResource
@@ -278,6 +282,7 @@ function Set-TargetResource {
                     if (Invoke-Expression -Command $expression) {
                         switch ($Mode) {
                             'Value' {
+                                Write-Verbose ('The key "{0}" will be removed' -f $KeyHierarchy[$i])
                                 $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
                             }
                             'ArrayElement' {
@@ -286,13 +291,16 @@ function Set-TargetResource {
                                 if ($v -is [Array]) {
                                     $script:newValue = $v | Where-Object {-not (Compare-MyObject $_ $ValueObject)}
                                     if ($null -eq $script:newValue) {
+                                        Write-Verbose ('The key "{0}" will be removed' -f $KeyHierarchy[$i])
                                         $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
                                     }
                                     else {
+                                        Write-Verbose ('The key "{0}" will be modified' -f $KeyHierarchy[$i])
                                         $expression += ('.{0} = @($script:newValue)' -f $KeyHierarchy[$i])
                                     }
                                 }
                                 else {
+                                    Write-Verbose ('The key "{0}" will be removed' -f $KeyHierarchy[$i])
                                     $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
                                 }
                             }
@@ -331,7 +339,6 @@ function Set-TargetResource {
                 $tHash = $tHash.($KeyHierarchy[$i])
             }
             else {
-
                 switch ($Mode) {
                     'Value' {
                         $tHash.($KeyHierarchy[$i]) = $ValueObject
@@ -340,14 +347,17 @@ function Set-TargetResource {
                     'ArrayElement' {
                         if ($tHash.($KeyHierarchy[$i]) -is [Array]) {
                             if ($tHash.($KeyHierarchy[$i]) | Where-Object { -not (Compare-MyObject $_ $ValueObject)}) {
+                                Write-Verbose ('The key "{0}" will be modified' -f $KeyHierarchy[$i])
                                 $tHash.($KeyHierarchy[$i]) += $ValueObject
                             }
                         }
                         elseif ($tHash.ContainsKey($KeyHierarchy[$i])) {
                             $newValue = @($tHash.($KeyHierarchy[$i]), $ValueObject)
+                            Write-Verbose ('The key "{0}" will be modified' -f $KeyHierarchy[$i])
                             $tHash.($KeyHierarchy[$i]) = $newValue
                         }
                         else {
+                            Write-Verbose ('The key "{0}" will be modified' -f $KeyHierarchy[$i])
                             $tHash.($KeyHierarchy[$i]) = @($ValueObject)
                         }
                     }
@@ -360,9 +370,12 @@ function Set-TargetResource {
 
     if (('utf8', 'utf8NoBOM') -eq $Encoding) {
         ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
+        Write-Verbose ('Json file "{0}" has been saved' -f $Path)
     }
     else {
         ConvertTo-Json -InputObject $JsonHash -Depth 100 | Convert-NewLine -NewLine $NewLine | Set-Content -Path $Path -Encoding $PSEncoder -NoNewline -Force
+        Write-Verbose ('The key "{0}" will be modified' -f $KeyHierarchy[$i])
+        Write-Verbose ('Json file "{0}" has been saved' -f $Path)
     }
 }
 #endregion Set-TargetResource
