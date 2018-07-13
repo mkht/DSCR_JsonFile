@@ -136,6 +136,22 @@ InModuleScope 'cJsonFile' {
                 $result.Key | Should -Be $getParam.Key
                 $result.Value | Should -Be '{"SubSubKey1":"SubSubValue1","SubSubKey2":"SubSubValue2"}'
             }
+
+            It 'Get exist Key Value Pair (Mode = "ArrayElement")' {
+                $jsonPath = (Join-Path $TestDrive $ExistMock)
+                $getParam = @{
+                    Path  = $jsonPath
+                    Key   = 'Array'
+                    Value = '"ArrayValue2"'
+                    Mode  = 'ArrayElement'
+                }
+                    
+                $result = Get-TargetResource @getParam
+                $result.Ensure | Should -Be 'Present'
+                $result.Path | Should -Be $getParam.Path
+                $result.Key | Should -Be $getParam.Key
+                $result.Value | Should -Be '["ArrayValue1","ArrayValue2","ArrayValue3"]'
+            }
         }
 
         Context 'Ensure = Absent' {
@@ -479,6 +495,22 @@ InModuleScope 'cJsonFile' {
                 $result.DicZ.DicY.k3 | Should -Be "ABC"
             }
 
+            It 'Add Array element to Json when the key not exist (Mode = "ArrayElement")' {
+                $jsonPath = (Join-Path $TestDrive $ExistMock)
+                $getParam = @{
+                    Ensure = 'Present'
+                    Path   = $jsonPath
+                    Key    = 'ArrayX'
+                    Value  = '"ArrayElementX"'
+                    Mode   = 'ArrayElement'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                ($result.ArrayX -is [Array]) | Should -Be $true
+                $result.ArrayX[0] | Should -Be 'ArrayElementX'
+            }
+
             It 'Modify exist Key Value Pair' {
                 $jsonPath = (Join-Path $TestDrive $ExistMock)
                 $getParam = @{
@@ -508,6 +540,39 @@ InModuleScope 'cJsonFile' {
                 $result.SubDictionary.SubDicKey1.k2 | Should -Be 345
                 $result.SubDictionary.SubDicKey1.k3 | Should -Be "ABC"
             }
+
+            It 'Add element to exist Array Value (Mode = "ArrayElement")' {
+                $jsonPath = (Join-Path $TestDrive $ExistMock)
+                $getParam = @{
+                    Ensure = 'Present'
+                    Path   = $jsonPath
+                    Key    = 'Array'
+                    Value  = '345'
+                    Mode   = "ArrayElement"
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                ($result.Array -is [Array]) | Should -Be $true
+                $result.Array[3] | Should -Be 345
+            }
+
+            It 'Add element to exist Value (Mode = "ArrayElement")' {
+                $jsonPath = (Join-Path $TestDrive $ExistMock)
+                $getParam = @{
+                    Ensure = 'Present'
+                    Path   = $jsonPath
+                    Key    = 'SubDictionary/SubDicKey2'
+                    Value  = '345'
+                    Mode   = "ArrayElement"
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result.SubDictionary.SubDicKey2.Count | Should -Be 2
+                $result.SubDictionary.SubDicKey2[0] | Should -Be $true
+                $result.SubDictionary.SubDicKey2[1] | Should -Be 345
+            }
         }
 
         Context 'Ensure = Absent' {
@@ -536,6 +601,24 @@ InModuleScope 'cJsonFile' {
                 { Set-TargetResource @getParam } | Should -Not -Throw
                 $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
                 $result.SubDictionary | Get-Member -MemberType NoteProperty | Where-Object {$_.Name -eq 'SubDicKey2'} | Should -Be $null
+            }
+
+            It 'Remove array element in JSON  (Mode = "ArrayElement")' {
+                $jsonPath = (Join-Path $TestDrive $ExistMock)
+                $getParam = @{
+                    Ensure = 'Absent'
+                    Path   = $jsonPath
+                    Key    = 'Array'
+                    Value  = 'ArrayValue1'
+                    Mode   = 'ArrayElement'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                ($result.Array -is [Array]) | Should -Be $true
+                $result.Array.Count | Should -Be 2
+                $result.Array[0] | Should -Be 'ArrayValue2'
+                $result.Array[1] | Should -Be 'ArrayValue3'
             }
         }
 

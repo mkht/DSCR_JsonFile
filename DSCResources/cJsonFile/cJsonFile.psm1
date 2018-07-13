@@ -1,4 +1,4 @@
-
+﻿
 Enum Encoding {
     Default
     utf8
@@ -34,6 +34,11 @@ function Get-TargetResource {
         [AllowEmptyString()]
         [string]
         $Value = '',
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Value', 'ArrayElement')]
+        [string]
+        $Mode = 'Value',
 
         [Parameter(Mandatory = $false)]
         [Encoding]
@@ -106,9 +111,26 @@ function Get-TargetResource {
                     $Result.Key = $Key
                     $Result.Value = ($tHash.$tKey | ConvertTo-Json -Compress)
 
-                    if (-not (Compare-MyObject $tHash.$tKey $ValueObject)) {
-                        Write-Verbose 'The Value of Key is not matched'
-                        $Result.Ensure = 'Absent'
+                    switch ($Mode) {
+                        'Value' {
+                            if (-not (Compare-MyObject $tHash.$tKey $ValueObject)) {
+                                Write-Verbose 'The Value of Key is not matched'
+                                $Result.Ensure = 'Absent'
+                            }
+                        }
+
+                        'ArrayElement' {
+                            if ($tHash.$tKey -is [Array]) {
+                                if (-not $tHash.$tKey.Contains($ValueObject)) {
+                                    Write-Verbose 'The Value of Key is not matched'
+                                    $Result.Ensure = 'Absent'
+                                }
+                            }
+                            else {
+                                Write-Verbose 'The Value of Key is not matched'
+                                $Result.Ensure = 'Absent'
+                            }
+                        }
                     }
 
                     break
@@ -150,6 +172,11 @@ function Test-TargetResource {
         $Value = '',
 
         [Parameter(Mandatory = $false)]
+        [ValidateSet('Value', 'ArrayElement')]
+        [string]
+        $Mode = 'Value',
+
+        [Parameter(Mandatory = $false)]
         [Encoding]
         $Encoding = 'utf8NoBOM',
 
@@ -186,6 +213,11 @@ function Set-TargetResource {
         [AllowEmptyString()]
         [string]
         $Value = '',
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Value', 'ArrayElement')]
+        [string]
+        $Mode = 'Value',
 
         [Parameter(Mandatory = $false)]
         [Encoding]
@@ -239,7 +271,27 @@ function Set-TargetResource {
                 }
                 else {
                     if (Invoke-Expression -Command $expression) {
-                        $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                        switch ($Mode) {
+                            'Value' {
+                                $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                            }
+                            'ArrayElement' {
+                                $tmpex = $expression + (".{0}" -f $KeyHierarchy[$i])
+                                $v = Invoke-Expression -Command $tmpex
+                                if ($v -is [Array]) {
+                                    $script:newValue = $v | Where-Object {-not (Compare-MyObject $_ $ValueObject)}
+                                    if ($null -eq $script:newValue) {
+                                        $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                                    }
+                                    else {
+                                        $expression += ('.{0} = @($script:newValue)' -f $KeyHierarchy[$i])
+                                    }
+                                }
+                                else {
+                                    $expression += (".Remove('{0}')" -f $KeyHierarchy[$i])
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -274,7 +326,28 @@ function Set-TargetResource {
                 $tHash = $tHash.($KeyHierarchy[$i])
             }
             else {
-                $tHash.($KeyHierarchy[$i]) = $ValueObject
+
+                switch ($Mode) {
+                    'Value' {
+                        $tHash.($KeyHierarchy[$i]) = $ValueObject
+                    }
+
+                    'ArrayElement' {
+                        if ($tHash.($KeyHierarchy[$i]) -is [Array]) {
+                            if ($tHash.($KeyHierarchy[$i]) | Where-Object { -not (Compare-MyObject $_ $ValueObject)}) {
+                                $tHash.($KeyHierarchy[$i]) += $ValueObject
+                            }
+                        }
+                        elseif ($tHash.ContainsKey($KeyHierarchy[$i])) {
+                            $newValue = @($tHash.($KeyHierarchy[$i]), $ValueObject)
+                            $tHash.($KeyHierarchy[$i]) = $newValue
+                        }
+                        else {
+                            $tHash.($KeyHierarchy[$i]) = @($ValueObject)
+                        }
+                    }
+                }
+
                 break
             }
         }
