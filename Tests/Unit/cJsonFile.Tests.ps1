@@ -7,6 +7,8 @@ Import-Module (Join-Path $PSScriptRoot '\TestHelper\TestHelper.psm1') -Force
 
 $global:TestData = Join-Path $PSScriptRoot '\TestData'
 
+#endregion HEADER
+
 # Begin Testing
 InModuleScope 'cJsonFile' {
     #region Set variables for testing
@@ -159,8 +161,9 @@ InModuleScope 'cJsonFile' {
             It 'Should return Absent when Json file was not found' {
                 $jsonPath = (Join-Path $TestDrive $NonExistMock)
                 $getParam = @{
-                    Path = $jsonPath
-                    Key  = 'String'
+                    Path  = $jsonPath
+                    Key   = 'String'
+                    Value = 'foo'
                 }
                     
                 $result = Get-TargetResource @getParam
@@ -170,8 +173,9 @@ InModuleScope 'cJsonFile' {
             It 'Should return Absent when the specified key was not found in JSON' {
                 $jsonPath = (Join-Path $TestDrive $ExistMock)
                 $getParam = @{
-                    Path = $jsonPath
-                    Key  = 'foo'
+                    Path  = $jsonPath
+                    Key   = 'foo'
+                    Value = 'foo'
                 }
                     
                 $result = Get-TargetResource @getParam
@@ -301,6 +305,7 @@ InModuleScope 'cJsonFile' {
                     Ensure = 'Present'
                     Path   = $jsonPath
                     Key    = 'Foo'
+                    Value  = 'foo'
                 }
                     
                 Test-TargetResource @getParam | Should -Be $false
@@ -312,6 +317,7 @@ InModuleScope 'cJsonFile' {
                     Ensure = 'Present'
                     Path   = $jsonPath
                     Key    = 'String'
+                    Value  = 'foo'
                 }
                     
                 Test-TargetResource @getParam | Should -Be $false
@@ -327,6 +333,7 @@ InModuleScope 'cJsonFile' {
                     Ensure = 'Absent'
                     Path   = $jsonPath
                     Key    = 'String'
+                    Value  = 'foo'
                 }
                     
                 Test-TargetResource @getParam | Should -Be $true
@@ -339,6 +346,7 @@ InModuleScope 'cJsonFile' {
                     Ensure = 'Absent'
                     Path   = $jsonPath
                     Key    = 'Foo'
+                    Value  = 'foo'
                 }
                     
                 Test-TargetResource @getParam | Should -Be $true
@@ -583,6 +591,7 @@ InModuleScope 'cJsonFile' {
                     Ensure = 'Absent'
                     Path   = $jsonPath
                     Key    = 'String'
+                    Value  = 'foo'
                 }
                     
                 { Set-TargetResource @getParam } | Should -Not -Throw
@@ -596,6 +605,7 @@ InModuleScope 'cJsonFile' {
                     Ensure = 'Absent'
                     Path   = $jsonPath
                     Key    = 'SubDictionary/SubDicKey2'
+                    Value  = 'foo'
                 }
                     
                 { Set-TargetResource @getParam } | Should -Not -Throw
