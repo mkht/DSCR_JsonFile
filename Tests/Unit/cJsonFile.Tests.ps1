@@ -410,6 +410,22 @@ InModuleScope 'cJsonFile' {
                 $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
                 $result.KeyX | Should -Be 'ValueX'
             }
+            
+            It 'Create new Json file when the file not exist (Missing parent directory)' {
+                $jsonPath = (Join-Path $TestDrive '\Parent Folder\MockJsonX.Json')
+                $getParam = @{
+                    Ensure = 'Present'
+                    Path   = $jsonPath
+                    Key    = 'KeyX'
+                    Value  = 'ValueX'
+                }
+                    
+                { Set-TargetResource @getParam } | Should -Not -Throw
+
+                Test-Path -LiteralPath $jsonPath | Should -Be $true
+                $result = Get-Content -Path $jsonPath -Encoding utf8 -raw | ConvertFrom-Json
+                $result.KeyX | Should -Be 'ValueX'
+            }
 
             It 'Add Key Value Pair to Json when the key not exist (string)' {
                 $jsonPath = (Join-Path $TestDrive $ExistMock)

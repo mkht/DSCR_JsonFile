@@ -367,7 +367,14 @@ function Set-TargetResource {
             }
         }
     }
+    
+    # Create directory if not exist
+    $ParentFolder = Split-Path -Path $Path -Parent -ErrorAction SilentlyContinue
+    if ($ParentFolder -and (-not (Test-Path -Path $ParentFolder -PathType Container))) {
+        $null = New-Item -Path $ParentFolder -ItemType Directory -Force
+    }
 
+    # Save Json file
     if (('utf8', 'utf8NoBOM') -eq $Encoding) {
         ConvertTo-Json -InputObject $JsonHash -Depth 100 | Format-Json | Out-String | Convert-NewLine -NewLine $NewLine | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes($_) } | Set-Content -Path $Path -Encoding Byte -NoNewline -Force
         Write-Verbose ('Json file "{0}" has been saved' -f $Path)

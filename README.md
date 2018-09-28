@@ -70,6 +70,9 @@ The result of executing the above configuration, the following JSON file will ou
 
 ----
 ## ChangeLog
+### 0.2.3
+ + Fixed an issue that Set-TargetResource fails when the parent folder of the `Path` is not exist.
+
 ### 0.2.2
  + Fix casing miss of the module name
  + Remove unnecessary files in the published package
