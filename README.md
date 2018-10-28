@@ -1,6 +1,10 @@
 DSCR_JsonFile
 ====
 
+## This repository is no longer maintained ! :no_entry:
+Please use [DSCR_FileContent](https://github.com/mkht/DSCR_FileContent/) module.
+
+----
 PowerShell DSC Resource to create JSON format file.
 
 ## Install
